@@ -4,6 +4,7 @@ import React from 'react';
 import IframeHost from '@/components/IframeHost';
 import { useAppStore } from '@/store/appStore';
 import clsx from 'clsx';
+import Favicon from '@/components/Favicon';
 
 export default function HomePage() {
   const apps = useAppStore((s) => s.apps);
@@ -114,7 +115,9 @@ export default function HomePage() {
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {apps.map((app) => (
                 <div key={app.id} className="bg-neutral-900 rounded p-3 flex flex-col gap-2">
-                  <div className="text-2xl">{app.icon ?? '🌐'}</div>
+                  <div className="text-2xl">
+                    {app.icon ? app.icon : <Favicon url={app.url} size={28} className="rounded" />}
+                  </div>
                   <div className="font-medium truncate" title={app.name}>{app.name}</div>
                   <div className="text-xs text-neutral-400 truncate" title={app.url}>{app.url}</div>
                   <div className="flex gap-2 mt-1">
@@ -203,8 +206,8 @@ export default function HomePage() {
                         onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
                         title={app.name}
                       >
-                        <span className="text-xl">{app.icon ?? '🌐'}</span>
-                        <span className="truncate">{app.name}</span>
+                      <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={20} className="rounded" />}</span>
+                      <span className="truncate">{app.name}</span>
                       </button>
                       <button
                         className="px-2 py-1 rounded bg-neutral-800"
@@ -267,7 +270,7 @@ export default function HomePage() {
                       <button className="flex-1 flex items-center gap-2 text-left"
                         onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
                       >
-                        <span className="text-xl">{app.icon ?? '🌐'}</span>
+                        <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={18} className="rounded" />}</span>
                         <span className="truncate">{app.name}</span>
                       </button>
                       <button
