@@ -45,6 +45,7 @@ export default function HomePage() {
   };
 
   const [switcherOpen, setSwitcherOpen] = React.useState(false);
+  const [installEvt, setInstallEvt] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [dragY, setDragY] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
   const startYRef = React.useRef<number | null>(null);
@@ -64,6 +65,24 @@ export default function HomePage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Capture install prompt
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallEvt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const onInstall = async () => {
+    if (!installEvt) return;
+    installEvt.prompt();
+    const choice = await installEvt.userChoice.catch(() => null);
+    setInstallEvt(null);
+    return choice;
+  };
 
   // Bottom sheet drag handlers (mobile)
   const onDragStart = (clientY: number) => {
@@ -172,20 +191,23 @@ export default function HomePage() {
                 onTouchEnd={onDragEnd}
               />
               <div className="px-3 pb-[max(env(safe-area-inset-bottom),1rem)] overflow-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">Web OS</div>
-                  <div className="flex items-center gap-2">
-                  {!showHome && (
-                    <div className="flex items-center gap-1 text-sm">
-                      <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(-0.1)}>-</button>
-                      <span className="min-w-[3.5rem] text-center">{Math.round(zoom * 100)}%</span>
-                      <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(+0.1)}>+</button>
-                    </div>
-                  )}
-                  <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setActiveApp(null)}>Home</button>
-                  <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setSwitcherOpen(false)}>Close</button>
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-medium">Web OS</div>
+            <div className="flex items-center gap-2">
+              {installEvt && (
+                <button className="px-3 py-1 rounded bg-green-600 hover:bg-green-500" onClick={onInstall}>Install</button>
+              )}
+              {!showHome && (
+                <div className="flex items-center gap-1 text-sm">
+                  <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(-0.1)}>-</button>
+                  <span className="min-w-[3.5rem] text-center">{Math.round(zoom * 100)}%</span>
+                  <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(+0.1)}>+</button>
                 </div>
-              </div>
+              )}
+              <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setActiveApp(null)}>Home</button>
+              <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setSwitcherOpen(false)}>Close</button>
+            </div>
+          </div>
               <div className="grid grid-cols-1 gap-2">
                 {openIds.length === 0 && (
                   <div className="text-sm text-neutral-400">No open apps</div>
@@ -238,6 +260,9 @@ export default function HomePage() {
             <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-800">
               <div className="font-medium">Web OS</div>
               <div className="flex items-center gap-2">
+                {installEvt && (
+                  <button className="px-2 py-1 rounded bg-green-600 hover:bg-green-500 text-sm" onClick={onInstall}>Install</button>
+                )}
                 {!showHome && (
                   <div className="flex items-center gap-1 text-sm">
                     <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(-0.1)}>-</button>
