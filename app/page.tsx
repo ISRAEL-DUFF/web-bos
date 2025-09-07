@@ -10,6 +10,7 @@ export default function HomePage() {
   const openIds = useAppStore((s) => s.openApps);
   const openApp = useAppStore((s) => s.openApp);
   const deleteApp = useAppStore((s) => s.deleteApp);
+  const closeApp = useAppStore((s) => s.closeApp);
   const addApp = useAppStore((s) => s.addApp);
   const activeApp = useAppStore((s) => s.activeApp);
   const setActiveApp = useAppStore((s) => s.setActiveApp);
@@ -43,6 +44,45 @@ export default function HomePage() {
   };
 
   const [switcherOpen, setSwitcherOpen] = React.useState(false);
+  const [dragY, setDragY] = React.useState(0);
+  const [dragging, setDragging] = React.useState(false);
+  const startYRef = React.useRef<number | null>(null);
+
+  // Persist FAB open state between visits
+  React.useEffect(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('ui.switcherOpen') : null;
+    if (saved) setSwitcherOpen(saved === '1');
+  }, []);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') window.localStorage.setItem('ui.switcherOpen', switcherOpen ? '1' : '0');
+  }, [switcherOpen]);
+
+  // ESC to close
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSwitcherOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Bottom sheet drag handlers (mobile)
+  const onDragStart = (clientY: number) => {
+    startYRef.current = clientY;
+    setDragging(true);
+  };
+  const onDragMove = (clientY: number) => {
+    if (startYRef.current == null) return;
+    const dy = Math.max(0, clientY - startYRef.current);
+    setDragY(dy);
+  };
+  const onDragEnd = () => {
+    const threshold = 100; // px to close
+    if (dragY > threshold) {
+      setSwitcherOpen(false);
+    }
+    setDragY(0);
+    setDragging(false);
+    startYRef.current = null;
+  };
 
   return (
     <div className="relative flex-1">
@@ -92,22 +132,46 @@ export default function HomePage() {
       <div className="fixed bottom-4 right-4 z-20 pointer-events-auto">
         <button
           aria-label="Switch app"
-          className="h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg flex items-center justify-center text-2xl"
+          className={clsx(
+            'h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg flex items-center justify-center text-2xl transition-transform duration-200',
+            switcherOpen && 'rotate-45'
+          )}
           onClick={() => setSwitcherOpen((v) => !v)}
         >
           ⇄
         </button>
       </div>
 
-      {/* Bottom sheet switcher (mobile) */}
-      {switcherOpen && (
-        <>
-          <div className="fixed inset-0 z-20 bg-black/40 md:hidden" onClick={() => setSwitcherOpen(false)} />
-          <div className="fixed inset-x-0 bottom-0 z-30 md:hidden pointer-events-auto">
-            <div className="bg-neutral-900 border-t border-neutral-800 rounded-t-xl p-3 max-h-[60vh] overflow-auto">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-medium">Web OS</div>
-                <div className="flex items-center gap-2">
+      {/* Bottom sheet switcher (mobile) with transitions */}
+      <div>
+        <div
+          aria-hidden={!switcherOpen}
+          className={clsx(
+            'fixed inset-0 z-20 bg-black/40 md:hidden transition-opacity duration-200',
+            switcherOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          )}
+          onClick={() => setSwitcherOpen(false)}
+        />
+        <div className={clsx('fixed inset-x-0 bottom-0 z-30 md:hidden pointer-events-none')}>
+          <div
+            className={clsx(
+              'pointer-events-auto transform',
+              dragging ? 'transition-none' : 'transition-transform duration-250 ease-out'
+            )}
+            style={{ transform: switcherOpen ? `translateY(${dragY}px)` : 'translateY(100%)' }}
+          >
+            <div className="bg-neutral-900 border-t border-neutral-800 rounded-t-xl pt-2 max-h-[60vh] overflow-hidden">
+              {/* Drag handle */}
+              <div
+                className="mx-auto mb-1 h-1.5 w-14 rounded-full bg-neutral-700"
+                onTouchStart={(e) => onDragStart(e.touches[0].clientY)}
+                onTouchMove={(e) => { e.preventDefault(); onDragMove(e.touches[0].clientY); }}
+                onTouchEnd={onDragEnd}
+              />
+              <div className="px-3 pb-[max(env(safe-area-inset-bottom),1rem)] overflow-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-medium">Web OS</div>
+                  <div className="flex items-center gap-2">
                   {!showHome && (
                     <div className="flex items-center gap-1 text-sm">
                       <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(-0.1)}>-</button>
@@ -128,29 +192,46 @@ export default function HomePage() {
                   if (!app) return null;
                   const isActive = activeApp === id;
                   return (
-                    <button
+                    <div
                       key={id}
                       className={clsx(
-                        'w-full flex items-center gap-2 p-3 rounded',
+                        'w-full flex items-center gap-2 p-3 rounded transition-transform active:scale-[0.98]',
                         isActive ? 'bg-neutral-800' : 'bg-neutral-900 hover:bg-neutral-800'
                       )}
-                      onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
                     >
-                      <span className="text-xl">{app.icon ?? '🌐'}</span>
-                      <span className="flex-1 text-left truncate">{app.name}</span>
-                    </button>
+                      <button className="flex-1 flex items-center gap-2 text-left"
+                        onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
+                        title={app.name}
+                      >
+                        <span className="text-xl">{app.icon ?? '🌐'}</span>
+                        <span className="truncate">{app.name}</span>
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded bg-neutral-800"
+                        title="Close app"
+                        onClick={(e) => { e.stopPropagation(); closeApp(id); }}
+                      >×</button>
+                    </div>
                   );
                 })}
               </div>
+              </div>
             </div>
           </div>
-        </>
-      )}
+        </div>
+      </div>
 
       {/* Desktop popover panel (chat-like) */}
-      {switcherOpen && (
-        <div className="hidden md:block fixed bottom-20 right-4 z-30 pointer-events-auto">
-          <div className="w-80 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl overflow-hidden">
+      {/* Desktop popover panel (chat-like) with transitions */}
+      <div className={clsx('hidden md:block fixed bottom-20 right-4 z-30 pointer-events-none')}
+        aria-hidden={!switcherOpen}
+      >
+        <div
+          className={clsx(
+            'w-80 bg-neutral-900 border border-neutral-800 rounded-lg shadow-xl overflow-hidden origin-bottom-right transform transition-all duration-200',
+            switcherOpen ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95'
+          )}
+        >
             <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-800">
               <div className="font-medium">Web OS</div>
               <div className="flex items-center gap-2">
@@ -175,25 +256,32 @@ export default function HomePage() {
                   if (!app) return null;
                   const isActive = activeApp === id;
                   return (
-                    <button
+                    <div
                       key={id}
                       className={clsx(
-                        'w-full flex items-center gap-2 p-2 rounded',
+                        'w-full flex items-center gap-2 p-2 rounded transition-transform active:scale-[0.98]',
                         isActive ? 'bg-neutral-800' : 'bg-neutral-900 hover:bg-neutral-800'
                       )}
-                      onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
                       title={app.name}
                     >
-                      <span className="text-xl">{app.icon ?? '🌐'}</span>
-                      <span className="flex-1 text-left truncate">{app.name}</span>
-                    </button>
+                      <button className="flex-1 flex items-center gap-2 text-left"
+                        onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
+                      >
+                        <span className="text-xl">{app.icon ?? '🌐'}</span>
+                        <span className="truncate">{app.name}</span>
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded bg-neutral-800"
+                        title="Close app"
+                        onClick={(e) => { e.stopPropagation(); closeApp(id); }}
+                      >×</button>
+                    </div>
                   );
                 })}
               </div>
             </div>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
