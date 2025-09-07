@@ -6,3 +6,9 @@ export type AppItem = {
   lastOpened: number; // epoch ms
 };
 
+// Minimal BeforeInstallPromptEvent type for PWA install prompt
+export interface BeforeInstallPromptEvent extends Event {
+  readonly platforms?: string[];
+  prompt: () => Promise<void> | void;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}

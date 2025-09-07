@@ -5,6 +5,7 @@ import IframeHost from '@/components/IframeHost';
 import { useAppStore } from '@/store/appStore';
 import clsx from 'clsx';
 import Favicon from '@/components/Favicon';
+import type { BeforeInstallPromptEvent } from '@/types';
 
 export default function HomePage() {
   const apps = useAppStore((s) => s.apps);
