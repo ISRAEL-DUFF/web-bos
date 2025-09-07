@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offline • Web OS</title>
+  <meta name="theme-color" content="#0a0a0a" />
+  <style>
+    html, body { height: 100%; }
+    body { margin: 0; background: #0a0a0a; color: #e5e5e5; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .wrap { min-height: 100%; display: grid; place-items: center; padding: 2rem; }
+    .card { max-width: 480px; width: 100%; background: #171717; border: 1px solid #262626; border-radius: 12px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    .title { font-weight: 600; font-size: 16px; margin-bottom: 6px; }
+    .desc { color: #a3a3a3; font-size: 14px; line-height: 1.5; }
+    .row { display: flex; gap: 8px; margin-top: 12px; }
+    .btn { appearance: none; border: 0; border-radius: 8px; background: #262626; color: #e5e5e5; padding: 8px 12px; cursor: pointer; }
+    .btn.primary { background: #2563eb; }
+    a { color: #93c5fd; }
+  </style>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="title">You’re offline</div>
+      <div class="desc">The app shell is available offline, but external sites require a connection. Check your network and try again.</div>
+      <div class="row">
+        <button class="btn" onclick="location.reload()">Reload</button>
+        <button class="btn primary" onclick="history.back()">Go Back</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

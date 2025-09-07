@@ -19,6 +19,8 @@ export default function IframeHost() {
 
   const [loading, setLoading] = React.useState<Set<string>>(() => new Set());
   const [blocked, setBlocked] = React.useState<Set<string>>(() => new Set());
+  const [progress, setProgress] = React.useState(0);
+  const progTimer = React.useRef<number | null>(null);
 
   // Create and remove iframes only when openIds change
   React.useEffect(() => {
@@ -140,6 +142,36 @@ export default function IframeHost() {
   const isActiveLoading = activeId ? loading.has(activeId) : false;
   const isActiveBlocked = activeId ? blocked.has(activeId) : false;
 
+  // Simulated top loading bar progress for active app (cross-origin safe)
+  React.useEffect(() => {
+    if (!activeId) {
+      if (progTimer.current) { window.clearInterval(progTimer.current); progTimer.current = null; }
+      setProgress(0);
+      return;
+    }
+    if (isActiveLoading && !isActiveBlocked) {
+      // start/increase toward 80%
+      if (progTimer.current) window.clearInterval(progTimer.current);
+      setProgress((p) => (p < 10 ? 10 : p));
+      progTimer.current = window.setInterval(() => {
+        setProgress((p) => {
+          const target = 85;
+          if (p < target) return p + Math.max(1, Math.round((target - p) * 0.05));
+          return p;
+        });
+      }, 150);
+    } else if (!isActiveLoading) {
+      // finish to 100 then reset
+      if (progTimer.current) { window.clearInterval(progTimer.current); progTimer.current = null; }
+      setProgress((p) => (p > 0 ? 100 : 0));
+      const t = window.setTimeout(() => setProgress(0), 250);
+      return () => window.clearTimeout(t);
+    }
+    return () => {
+      if (progTimer.current) { window.clearInterval(progTimer.current); progTimer.current = null; }
+    };
+  }, [activeId, isActiveLoading, isActiveBlocked]);
+
   const retryActive = () => {
     if (!activeId) return;
     const iframe = frames.current.get(activeId);
@@ -183,9 +215,13 @@ export default function IframeHost() {
   return (
     <div className="iframe-host">
       <div ref={containerRef} className="absolute inset-0" />
-      {isActiveLoading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="h-10 w-10 rounded-full border-2 border-neutral-700 border-t-transparent animate-spin" />
+      {/* Top loading bar */}
+      {progress > 0 && (
+        <div className="absolute top-0 left-0 right-0 z-20 h-0.5 bg-neutral-800">
+          <div
+            className="h-full bg-blue-500 transition-[width] duration-150"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       )}
       {isActiveBlocked && (

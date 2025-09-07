@@ -1,8 +1,9 @@
-const CACHE_NAME = 'web-os-cache-v1';
+const CACHE_NAME = 'web-os-cache-v2';
 const ASSETS = [
   '/',
   '/manifest.webmanifest',
-  '/icon.svg'
+  '/icon.svg',
+  '/offline.html'
 ];
 
 self.addEventListener('install', (event) => {
@@ -15,6 +16,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : undefined)))).then(() => self.clients.claim())
   );
+});
+
+// Support skipWaiting via message
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Basic runtime caching: navigation is network-first; static is cache-first
@@ -34,7 +42,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copy).catch(() => {}));
           return res;
         })
-        .catch(() => caches.match(req).then((r) => r || caches.match('/')))
+        .catch(() => caches.match(req).then((r) => r || caches.match('/offline.html') || caches.match('/')))
     );
     return;
   }
@@ -61,4 +69,3 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
-
