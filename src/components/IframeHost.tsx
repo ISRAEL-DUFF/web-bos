@@ -10,6 +10,7 @@ const ALLOW = 'geolocation; microphone; camera; clipboard-write; clipboard-read'
 export default function IframeHost() {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const frames = React.useRef<Map<string, HTMLIFrameElement>>(new Map());
+  const timers = React.useRef<Map<string, number>>(new Map());
 
   const openIds = useAppStore((s) => s.openApps);
   const activeId = useAppStore((s) => s.activeApp);
@@ -17,6 +18,7 @@ export default function IframeHost() {
   const getZoom = useAppStore((s) => s.getZoom);
 
   const [loading, setLoading] = React.useState<Set<string>>(() => new Set());
+  const [blocked, setBlocked] = React.useState<Set<string>>(() => new Set());
 
   // Create and remove iframes only when openIds change
   React.useEffect(() => {
@@ -48,8 +50,26 @@ export default function IframeHost() {
 
         // mark loading until first load event
         setLoading((prev) => new Set(prev).add(id));
-        const onLoad = () => setLoading((prev) => { const n = new Set(prev); n.delete(id); return n; });
+        const onLoad = () => {
+          // clear timer if any
+          const t = timers.current.get(id);
+          if (t) { clearTimeout(t); timers.current.delete(id); }
+          setLoading((prev) => { const n = new Set(prev); n.delete(id); return n; });
+          setBlocked((prev) => { const n = new Set(prev); n.delete(id); return n; });
+        };
         iframe.addEventListener('load', onLoad, { once: true });
+
+        // start blocked timeout (site may disallow embedding)
+        const timeoutId = window.setTimeout(() => {
+          setBlocked((prev) => {
+            // only mark blocked if still loading
+            if (!loading.has(id)) return prev;
+            const n = new Set(prev);
+            n.add(id);
+            return n;
+          });
+        }, 6000);
+        timers.current.set(id, timeoutId);
       }
     }
 
@@ -58,6 +78,10 @@ export default function IframeHost() {
       if (!openIds.includes(id)) {
         iframe.remove();
         frames.current.delete(id);
+        const t = timers.current.get(id);
+        if (t) { clearTimeout(t); timers.current.delete(id); }
+        setLoading((prev) => { const n = new Set(prev); n.delete(id); return n; });
+        setBlocked((prev) => { const n = new Set(prev); n.delete(id); return n; });
       }
     }
   }, [openIds, appsById]);
@@ -78,9 +102,27 @@ export default function IframeHost() {
       if (app && iframe.src !== app.url) {
         // mark as loading again
         setLoading((prev) => new Set(prev).add(id));
+        setBlocked((prev) => { const n = new Set(prev); n.delete(id); return n; });
+        // clear previous timer and start a new one
+        const prevTimer = timers.current.get(id);
+        if (prevTimer) { clearTimeout(prevTimer); timers.current.delete(id); }
         iframe.src = app.url; // explicit reload on edit
-        const onLoad = () => setLoading((prev) => { const n = new Set(prev); n.delete(id); return n; });
+        const onLoad = () => {
+          const t = timers.current.get(id);
+          if (t) { clearTimeout(t); timers.current.delete(id); }
+          setLoading((prev) => { const n = new Set(prev); n.delete(id); return n; });
+          setBlocked((prev) => { const n = new Set(prev); n.delete(id); return n; });
+        };
         iframe.addEventListener('load', onLoad, { once: true });
+        const timeoutId = window.setTimeout(() => {
+          setBlocked((prev) => {
+            if (!loading.has(id)) return prev;
+            const n = new Set(prev);
+            n.add(id);
+            return n;
+          });
+        }, 6000);
+        timers.current.set(id, timeoutId);
       }
     }
   }, [appsById]);
@@ -96,6 +138,47 @@ export default function IframeHost() {
   });
 
   const isActiveLoading = activeId ? loading.has(activeId) : false;
+  const isActiveBlocked = activeId ? blocked.has(activeId) : false;
+
+  const retryActive = () => {
+    if (!activeId) return;
+    const iframe = frames.current.get(activeId);
+    const app = appsById[activeId];
+    if (!iframe || !app) return;
+    setBlocked((prev) => { const n = new Set(prev); n.delete(activeId); return n; });
+    setLoading((prev) => new Set(prev).add(activeId));
+    const prevTimer = timers.current.get(activeId);
+    if (prevTimer) { clearTimeout(prevTimer); timers.current.delete(activeId); }
+    iframe.src = app.url;
+    const onLoad = () => {
+      const t = timers.current.get(activeId!);
+      if (t) { clearTimeout(t); timers.current.delete(activeId!); }
+      setLoading((prev) => { const n = new Set(prev); n.delete(activeId!); return n; });
+      setBlocked((prev) => { const n = new Set(prev); n.delete(activeId!); return n; });
+    };
+    iframe.addEventListener('load', onLoad, { once: true });
+    const timeoutId = window.setTimeout(() => {
+      setBlocked((prev) => {
+        if (!loading.has(activeId!)) return prev;
+        const n = new Set(prev);
+        n.add(activeId!);
+        return n;
+      });
+    }, 6000);
+    timers.current.set(activeId, timeoutId);
+  };
+
+  const openActiveInNewTab = () => {
+    if (!activeId) return;
+    const app = appsById[activeId];
+    if (!app) return;
+    window.open(app.url, '_blank', 'noopener,noreferrer');
+  };
+
+  const keepWaiting = () => {
+    if (!activeId) return;
+    setBlocked((prev) => { const n = new Set(prev); n.delete(activeId); return n; });
+  };
 
   return (
     <div className="iframe-host">
@@ -103,6 +186,19 @@ export default function IframeHost() {
       {isActiveLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div className="h-10 w-10 rounded-full border-2 border-neutral-700 border-t-transparent animate-spin" />
+        </div>
+      )}
+      {isActiveBlocked && (
+        <div className="absolute inset-0 z-20 flex items-end md:items-center justify-center">
+          <div className="m-4 w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900/95 p-4 shadow-xl">
+            <div className="font-medium mb-1">This site may not allow embedding</div>
+            <div className="text-sm text-neutral-400 mb-3">It’s taking longer than usual to load. Some sites block iframes via X-Frame-Options or CSP.</div>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button className="px-3 py-1 rounded bg-neutral-800" onClick={keepWaiting}>Keep waiting</button>
+              <button className="px-3 py-1 rounded bg-neutral-800" onClick={retryActive}>Retry</button>
+              <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500" onClick={openActiveInNewTab}>Open in new tab</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
