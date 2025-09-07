@@ -66,6 +66,14 @@ export default function ServiceWorkerRegister() {
           </div>
         </div>
       )}
+      {/* Manual SW refresh helper */}
+      <div style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 40, pointerEvents: 'auto' }}>
+        <button
+          className="hidden md:inline px-2 py-1 rounded bg-neutral-800 text-xs"
+          onClick={() => navigator.serviceWorker.getRegistration().then((r) => r?.update())}
+          title="Check for updates"
+        >SW Update</button>
+      </div>
     </>
   );
 }

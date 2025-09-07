@@ -6,6 +6,7 @@ export const metadata = {
 import './globals.css';
 import React from 'react';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
+import ClipboardListener from '@/components/ClipboardListener';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="h-screen flex flex-col">{children}</div>
         <ServiceWorkerRegister />
+        <ClipboardListener />
       </body>
     </html>
   );

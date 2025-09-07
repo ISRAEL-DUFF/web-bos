@@ -18,6 +18,12 @@ export default function HomePage() {
   const setActiveApp = useAppStore((s) => s.setActiveApp);
   const getZoom = useAppStore((s) => s.getZoom);
   const setZoom = useAppStore((s) => s.setZoom);
+  const clipboard = useAppStore((s) => s.clipboard);
+  const addClipboard = useAppStore((s) => s.addClipboard);
+  const removeClipboard = useAppStore((s) => s.removeClipboard);
+  const clearClipboard = useAppStore((s) => s.clearClipboard);
+  const notepad = useAppStore((s) => s.notepad);
+  const setNotepad = useAppStore((s) => s.setNotepad);
 
   const [name, setName] = React.useState('');
   const [url, setUrl] = React.useState('');
@@ -50,6 +56,7 @@ export default function HomePage() {
   const [dragY, setDragY] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
   const startYRef = React.useRef<number | null>(null);
+  const [panel, setPanel] = React.useState<'apps' | 'clipboard' | 'notes'>('apps');
 
   // Persist FAB open state between visits
   React.useEffect(() => {
@@ -103,6 +110,21 @@ export default function HomePage() {
     setDragY(0);
     setDragging(false);
     startYRef.current = null;
+  };
+
+  const syncFromSystemClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) addClipboard(text);
+    } catch {
+      alert('Clipboard read blocked. Try using the copy action inside the app or paste into Notepad.');
+    }
+  };
+
+  const copyText = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {}
   };
 
   return (
@@ -209,38 +231,89 @@ export default function HomePage() {
               <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setSwitcherOpen(false)}>Close</button>
             </div>
           </div>
-              <div className="grid grid-cols-1 gap-2">
-                {openIds.length === 0 && (
-                  <div className="text-sm text-neutral-400">No open apps</div>
-                )}
-                {openIds.map((id) => {
-                  const app = apps.find((a) => a.id === id);
-                  if (!app) return null;
-                  const isActive = activeApp === id;
-                  return (
-                    <div
-                      key={id}
-                      className={clsx(
-                        'w-full flex items-center gap-2 p-3 rounded transition-transform active:scale-[0.98]',
-                        isActive ? 'bg-neutral-800' : 'bg-neutral-900 hover:bg-neutral-800'
-                      )}
-                    >
-                      <button className="flex-1 flex items-center gap-2 text-left"
-                        onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
-                        title={app.name}
-                      >
-                      <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={20} className="rounded" />}</span>
-                      <span className="truncate">{app.name}</span>
-                      </button>
-                      <button
-                        className="px-2 py-1 rounded bg-neutral-800"
-                        title="Close app"
-                        onClick={(e) => { e.stopPropagation(); closeApp(id); }}
-                      >×</button>
-                    </div>
-                  );
-                })}
+              {/* Panel tabs */}
+              <div className="flex items-center gap-2 mb-2">
+                {(['apps','clipboard','notes'] as const).map((key) => (
+                  <button key={key}
+                    className={clsx('px-3 py-1 rounded text-sm', panel === key ? 'bg-neutral-800' : 'bg-neutral-900')}
+                    onClick={() => setPanel(key)}
+                  >{key === 'apps' ? 'Apps' : key === 'clipboard' ? 'Clipboard' : 'Notepad'}</button>
+                ))}
               </div>
+              {/* Apps panel */}
+              {panel === 'apps' && (
+                <div className="grid grid-cols-1 gap-2">
+                  {openIds.length === 0 && (
+                    <div className="text-sm text-neutral-400">No open apps</div>
+                  )}
+                  {openIds.map((id) => {
+                    const app = apps.find((a) => a.id === id);
+                    if (!app) return null;
+                    const isActive = activeApp === id;
+                    return (
+                      <div
+                        key={id}
+                        className={clsx(
+                          'w-full flex items-center gap-2 p-3 rounded transition-transform active:scale-[0.98]',
+                          isActive ? 'bg-neutral-800' : 'bg-neutral-900 hover:bg-neutral-800'
+                        )}
+                      >
+                        <button className="flex-1 flex items-center gap-2 text-left"
+                          onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
+                          title={app.name}
+                        >
+                          <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={20} className="rounded" />}</span>
+                          <span className="truncate">{app.name}</span>
+                        </button>
+                        <button
+                          className="px-2 py-1 rounded bg-neutral-800"
+                          title="Close app"
+                          onClick={(e) => { e.stopPropagation(); closeApp(id); }}
+                        >×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Clipboard panel */}
+              {panel === 'clipboard' && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <button className="px-3 py-1 rounded bg-neutral-800" onClick={syncFromSystemClipboard}>Add from clipboard</button>
+                    {clipboard.length > 0 && (
+                      <button className="px-3 py-1 rounded bg-neutral-800" onClick={clearClipboard}>Clear</button>
+                    )}
+                  </div>
+                  {clipboard.length === 0 && (
+                    <div className="text-sm text-neutral-400">Copied text will appear here. You can also paste into Notepad.</div>
+                  )}
+                  {clipboard.map((c) => (
+                    <div key={c.id} className="bg-neutral-900 hover:bg-neutral-800 rounded p-2">
+                      <div className="text-xs text-neutral-400 mb-1">{new Date(c.ts).toLocaleTimeString()}</div>
+                      <div className="text-sm break-words whitespace-pre-wrap max-h-32 overflow-auto">{c.text}</div>
+                      <div className="mt-2 flex gap-2">
+                        <button className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(c.text)}>Copy</button>
+                        <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => removeClipboard(c.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Notepad panel */}
+              {panel === 'notes' && (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    className="w-full h-40 bg-neutral-900 rounded p-2 outline-none"
+                    placeholder="Type or paste notes here..."
+                    value={notepad}
+                    onChange={(e) => setNotepad(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(notepad)}>Copy All</button>
+                    <button className="px-3 py-1 rounded bg-neutral-800 text-sm" onClick={() => setNotepad('')}>Clear</button>
+                  </div>
+                </div>
+              )}
               </div>
             </div>
           </div>
@@ -276,38 +349,92 @@ export default function HomePage() {
               </div>
             </div>
             <div className="max-h-80 overflow-auto p-2">
-              {openIds.length === 0 && (
-                <div className="text-sm text-neutral-400 px-2 py-3">No open apps</div>
-              )}
-              <div className="grid grid-cols-1 gap-1">
-                {openIds.map((id) => {
-                  const app = apps.find((a) => a.id === id);
-                  if (!app) return null;
-                  const isActive = activeApp === id;
-                  return (
-                    <div
-                      key={id}
-                      className={clsx(
-                        'w-full flex items-center gap-2 p-2 rounded transition-transform active:scale-[0.98]',
-                        isActive ? 'bg-neutral-800' : 'bg-neutral-900 hover:bg-neutral-800'
-                      )}
-                      title={app.name}
-                    >
-                      <button className="flex-1 flex items-center gap-2 text-left"
-                        onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
-                      >
-                        <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={18} className="rounded" />}</span>
-                        <span className="truncate">{app.name}</span>
-                      </button>
-                      <button
-                        className="px-2 py-1 rounded bg-neutral-800"
-                        title="Close app"
-                        onClick={(e) => { e.stopPropagation(); closeApp(id); }}
-                      >×</button>
-                    </div>
-                  );
-                })}
+              {/* Panel tabs */}
+              <div className="flex items-center gap-2 mb-2">
+                {(['apps','clipboard','notes'] as const).map((key) => (
+                  <button key={key}
+                    className={clsx('px-2.5 py-1 rounded text-sm', panel === key ? 'bg-neutral-800' : 'bg-neutral-900')}
+                    onClick={() => setPanel(key)}
+                  >{key === 'apps' ? 'Apps' : key === 'clipboard' ? 'Clipboard' : 'Notepad'}</button>
+                ))}
               </div>
+
+              {/* Apps panel */}
+              {panel === 'apps' && (
+                <div className="grid grid-cols-1 gap-1">
+                  {openIds.length === 0 && (
+                    <div className="text-sm text-neutral-400 px-2 py-3">No open apps</div>
+                  )}
+                  {openIds.map((id) => {
+                    const app = apps.find((a) => a.id === id);
+                    if (!app) return null;
+                    const isActive = activeApp === id;
+                    return (
+                      <div
+                        key={id}
+                        className={clsx(
+                          'w-full flex items-center gap-2 p-2 rounded transition-transform active:scale-[0.98]',
+                          isActive ? 'bg-neutral-800' : 'bg-neutral-900 hover:bg-neutral-800'
+                        )}
+                        title={app.name}
+                      >
+                        <button className="flex-1 flex items-center gap-2 text-left"
+                          onClick={() => { setActiveApp(id); setSwitcherOpen(false); }}
+                        >
+                          <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={18} className="rounded" />}</span>
+                          <span className="truncate">{app.name}</span>
+                        </button>
+                        <button
+                          className="px-2 py-1 rounded bg-neutral-800"
+                          title="Close app"
+                          onClick={(e) => { e.stopPropagation(); closeApp(id); }}
+                        >×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Clipboard panel */}
+              {panel === 'clipboard' && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <button className="px-2.5 py-1 rounded bg-neutral-800 text-sm" onClick={syncFromSystemClipboard}>Add from clipboard</button>
+                    {clipboard.length > 0 && (
+                      <button className="px-2.5 py-1 rounded bg-neutral-800 text-sm" onClick={clearClipboard}>Clear</button>
+                    )}
+                  </div>
+                  {clipboard.length === 0 && (
+                    <div className="text-sm text-neutral-400 px-2 py-3">Copied text will appear here. You can also paste into Notepad.</div>
+                  )}
+                  {clipboard.map((c) => (
+                    <div key={c.id} className="bg-neutral-900 hover:bg-neutral-800 rounded p-2">
+                      <div className="text-xs text-neutral-400 mb-1">{new Date(c.ts).toLocaleString()}</div>
+                      <div className="text-sm break-words whitespace-pre-wrap max-h-32 overflow-auto">{c.text}</div>
+                      <div className="mt-2 flex gap-2">
+                        <button className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(c.text)}>Copy</button>
+                        <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => removeClipboard(c.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Notepad panel */}
+              {panel === 'notes' && (
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    className="w-full h-40 bg-neutral-900 rounded p-2 outline-none"
+                    placeholder="Type or paste notes here..."
+                    value={notepad}
+                    onChange={(e) => setNotepad(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <button className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(notepad)}>Copy All</button>
+                    <button className="px-2.5 py-1 rounded bg-neutral-800 text-sm" onClick={() => setNotepad('')}>Clear</button>
+                  </div>
+                </div>
+              )}
             </div>
         </div>
       </div>

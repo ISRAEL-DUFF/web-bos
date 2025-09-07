@@ -12,3 +12,9 @@ export interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void> | void;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
+
+export type ClipItem = {
+  id: string;
+  text: string;
+  ts: number;
+};

@@ -47,12 +47,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Never cache Next.js build assets with cache-first to avoid version mismatches
+  if (url.pathname.startsWith('/_next/')) {
+    event.respondWith(
+      fetch(req).catch(() => caches.match('/offline.html'))
+    );
+    return;
+  }
+
   const isStatic =
     req.destination === 'style' ||
     req.destination === 'script' ||
     req.destination === 'image' ||
-    req.destination === 'font' ||
-    url.pathname.startsWith('/_next/static/');
+    req.destination === 'font';
 
   if (isStatic) {
     event.respondWith(

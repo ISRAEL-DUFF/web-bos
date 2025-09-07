@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { AppItem } from '@/types';
+import { AppItem, ClipItem } from '@/types';
 
 type State = {
   apps: AppItem[];
@@ -10,6 +10,8 @@ type State = {
   activeApp: string | null;
   lruLimit: number;
   zoom: Record<string, number>; // per-app zoom factor
+  clipboard: ClipItem[];
+  notepad: string;
 };
 
 type Actions = {
@@ -23,18 +25,27 @@ type Actions = {
   appsById: () => Record<string, AppItem>;
   getZoom: (id: string) => number;
   setZoom: (id: string, z: number) => void;
+  addClipboard: (text: string) => void;
+  removeClipboard: (id: string) => void;
+  clearClipboard: () => void;
+  setNotepad: (text: string) => void;
 };
 
 const genId = () => crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
 
 const safeStorage = createJSONStorage(() => {
   if (typeof window !== 'undefined') return window.localStorage;
-  // Fallback no-op storage for SSR build phase
-  return {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {},
+  // In-memory Storage polyfill for non-window environments
+  const map = new Map<string, string>();
+  const memory: Storage = {
+    getItem: (key: string) => (map.has(key) ? map.get(key)! : null),
+    setItem: (key: string, value: string) => { map.set(key, String(value)); },
+    removeItem: (key: string) => { map.delete(key); },
+    clear: () => { map.clear(); },
+    key: (index: number) => Array.from(map.keys())[index] ?? null,
+    get length() { return map.size; },
   } as unknown as Storage;
+  return memory;
 });
 
 export const useAppStore = create<State & Actions>()(
@@ -45,6 +56,8 @@ export const useAppStore = create<State & Actions>()(
       activeApp: null,
       lruLimit: 4,
       zoom: {},
+      clipboard: [],
+      notepad: '',
 
       addApp: (app) => {
         const id = app.id ?? genId();
@@ -115,12 +128,32 @@ export const useAppStore = create<State & Actions>()(
 
       getZoom: (id) => get().zoom[id] ?? 1,
       setZoom: (id, z) => set((s) => ({ zoom: { ...s.zoom, [id]: Math.max(0.5, Math.min(2, Number.isFinite(z) ? z : 1)) } })),
+
+      addClipboard: (text) => set((s) => {
+        const t = text?.toString().trim();
+        if (!t) return {} as any;
+        const item: ClipItem = { id: genId(), text: t, ts: Date.now() };
+        const existing = s.clipboard.filter((c) => c.text !== t); // de-dup exact
+        const next = [item, ...existing].slice(0, 25);
+        return { clipboard: next } as any;
+      }),
+      removeClipboard: (id) => set((s) => ({ clipboard: s.clipboard.filter((c) => c.id !== id) })),
+      clearClipboard: () => set({ clipboard: [] }),
+      setNotepad: (text) => set({ notepad: text }),
     }),
     {
       name: 'web-os',
       version: 1,
       storage: safeStorage,
-      partialize: (s) => ({ apps: s.apps, openApps: s.openApps, activeApp: s.activeApp, lruLimit: s.lruLimit, zoom: s.zoom }),
+      partialize: (s) => ({
+        apps: s.apps,
+        openApps: s.openApps,
+        activeApp: s.activeApp,
+        lruLimit: s.lruLimit,
+        zoom: s.zoom,
+        clipboard: s.clipboard,
+        notepad: s.notepad,
+      }),
     }
   )
 );
