@@ -56,6 +56,9 @@ export default function HomePage() {
   const [dragY, setDragY] = React.useState(0);
   const [dragging, setDragging] = React.useState(false);
   const startYRef = React.useRef<number | null>(null);
+  // Movable FAB state
+  const [fabPos, setFabPos] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const fabDownRef = React.useRef<{ id: number; startX: number; startY: number; offsetX: number; offsetY: number; moved: boolean } | null>(null);
   const [panel, setPanel] = React.useState<'apps' | 'clipboard' | 'notes'>('apps');
 
   // Persist FAB open state between visits
@@ -73,6 +76,76 @@ export default function HomePage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Initialize and persist FAB position
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem('ui.fabPos');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
+          setFabPos(parsed);
+          return;
+        }
+      } catch {}
+    }
+    const margin = 16;
+    const size = 48; // h-12 w-12
+    setFabPos({ x: window.innerWidth - margin - size, y: window.innerHeight - margin - size });
+  }, []);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') window.localStorage.setItem('ui.fabPos', JSON.stringify(fabPos));
+  }, [fabPos]);
+  React.useEffect(() => {
+    const onResize = () => {
+      const margin = 8;
+      const size = 48;
+      setFabPos((p) => ({
+        x: Math.max(margin, Math.min(p.x, window.innerWidth - margin - size)),
+        y: Math.max(margin, Math.min(p.y, window.innerHeight - margin - size)),
+      }));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const onFabPointerDown = (e: React.PointerEvent) => {
+    const id = (e as any).pointerId ?? 0;
+    (e.target as Element).setPointerCapture?.(id);
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    fabDownRef.current = { id, startX: e.clientX, startY: e.clientY, offsetX, offsetY, moved: false };
+  };
+  const onFabPointerMove = (e: React.PointerEvent) => {
+    const st = fabDownRef.current;
+    if (!st) return;
+    const dx = e.clientX - st.startX;
+    const dy = e.clientY - st.startY;
+    const threshold = 6;
+    if (!st.moved && Math.hypot(dx, dy) > threshold) {
+      st.moved = true;
+    }
+    if (st.moved) {
+      const margin = 8;
+      const size = 48;
+      const nx = e.clientX - st.offsetX;
+      const ny = e.clientY - st.offsetY;
+      const maxX = window.innerWidth - margin - size;
+      const maxY = window.innerHeight - margin - size;
+      setFabPos({ x: Math.max(margin, Math.min(nx, maxX)), y: Math.max(margin, Math.min(ny, maxY)) });
+    }
+  };
+  const onFabPointerUp = (e: React.PointerEvent) => {
+    const st = fabDownRef.current;
+    fabDownRef.current = null;
+    if (!st) return;
+    (e.target as Element).releasePointerCapture?.(st.id);
+    if (!st.moved) {
+      setSwitcherOpen((v) => !v);
+    }
+  };
 
   // Capture install prompt
   React.useEffect(() => {
@@ -174,14 +247,19 @@ export default function HomePage() {
       )}
 
       {/* FAB (mobile and desktop) */}
-      <div className="fixed bottom-4 right-4 z-20 pointer-events-auto">
+      <div
+        className="fixed z-20 pointer-events-auto"
+        style={{ left: `${fabPos.x}px`, top: `${fabPos.y}px` }}
+      >
         <button
           aria-label="Switch app"
           className={clsx(
-            'h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg flex items-center justify-center text-2xl transition-transform duration-200',
+            'h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg flex items-center justify-center text-2xl transition-transform duration-200 touch-none',
             switcherOpen && 'rotate-45'
           )}
-          onClick={() => setSwitcherOpen((v) => !v)}
+          onPointerDown={onFabPointerDown}
+          onPointerMove={onFabPointerMove}
+          onPointerUp={onFabPointerUp}
         >
           ⇄
         </button>
