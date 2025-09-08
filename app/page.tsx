@@ -59,6 +59,9 @@ export default function HomePage() {
   // Movable FAB state
   const [fabPos, setFabPos] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const fabDownRef = React.useRef<{ id: number; startX: number; startY: number; offsetX: number; offsetY: number; moved: boolean } | null>(null);
+  const skipNextClickRef = React.useRef(false);
+  const dragWasMoveRef = React.useRef(false);
+  const [isTouchEnv, setIsTouchEnv] = React.useState(false);
   const [panel, setPanel] = React.useState<'apps' | 'clipboard' | 'notes'>('apps');
 
   // Persist FAB open state between visits
@@ -79,6 +82,9 @@ export default function HomePage() {
 
   // Initialize and persist FAB position
   React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsTouchEnv('ontouchstart' in window || (navigator as any).maxTouchPoints > 0);
+    }
     if (typeof window === 'undefined') return;
     const saved = window.localStorage.getItem('ui.fabPos');
     if (saved) {
@@ -110,22 +116,25 @@ export default function HomePage() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const onFabPointerDown = (e: React.PointerEvent) => {
-    const id = (e as any).pointerId ?? 0;
-    (e.target as Element).setPointerCapture?.(id);
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
+  const onFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const id = e.pointerId ?? 0;
+    e.currentTarget.setPointerCapture?.(id);
+    const rect = e.currentTarget.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
     fabDownRef.current = { id, startX: e.clientX, startY: e.clientY, offsetX, offsetY, moved: false };
+    skipNextClickRef.current = false;
   };
-  const onFabPointerMove = (e: React.PointerEvent) => {
+  const onFabPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
     const st = fabDownRef.current;
     if (!st) return;
     const dx = e.clientX - st.startX;
     const dy = e.clientY - st.startY;
-    const threshold = 6;
+    const threshold = 20;
     if (!st.moved && Math.hypot(dx, dy) > threshold) {
       st.moved = true;
+      // mark that a drag occurred; we'll suppress the subsequent click
+      skipNextClickRef.current = true;
     }
     if (st.moved) {
       const margin = 8;
@@ -137,14 +146,89 @@ export default function HomePage() {
       setFabPos({ x: Math.max(margin, Math.min(nx, maxX)), y: Math.max(margin, Math.min(ny, maxY)) });
     }
   };
-  const onFabPointerUp = (e: React.PointerEvent) => {
+  const onFabPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
     const st = fabDownRef.current;
     fabDownRef.current = null;
     if (!st) return;
-    (e.target as Element).releasePointerCapture?.(st.id);
-    if (!st.moved) {
+    e.currentTarget.releasePointerCapture?.(st.id);
+    const dx = e.clientX - st.startX;
+    const dy = e.clientY - st.startY;
+    const threshold = 20;
+    const isClick = Math.hypot(dx, dy) <= threshold;
+    if (isClick) {
+      // Toggle now; let click be ignored just in case
       setSwitcherOpen((v) => !v);
+      skipNextClickRef.current = true;
+      dragWasMoveRef.current = false;
+    } else {
+      dragWasMoveRef.current = true;
     }
+  };
+  const onFabPointerCancel = () => {
+    fabDownRef.current = null;
+    skipNextClickRef.current = false;
+    dragWasMoveRef.current = false;
+  };
+  const onFabClick = () => {
+    if (skipNextClickRef.current || dragWasMoveRef.current) {
+      // Reset and ignore this click (it followed a pointerup toggle or a drag)
+      skipNextClickRef.current = false;
+      dragWasMoveRef.current = false;
+      return;
+    }
+    setSwitcherOpen((v) => !v);
+  };
+
+  // Touch event fallback (iOS Safari reliability)
+  const onFabTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
+    const t = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = t.clientX - rect.left;
+    const offsetY = t.clientY - rect.top;
+    fabDownRef.current = { id: 0, startX: t.clientX, startY: t.clientY, offsetX, offsetY, moved: false };
+    skipNextClickRef.current = false;
+    dragWasMoveRef.current = false;
+  };
+  const onFabTouchMove = (e: React.TouchEvent<HTMLButtonElement>) => {
+    const st = fabDownRef.current;
+    if (!st) return;
+    const t = e.touches[0];
+    const dx = t.clientX - st.startX;
+    const dy = t.clientY - st.startY;
+    const threshold = 20;
+    if (!st.moved && Math.hypot(dx, dy) > threshold) {
+      st.moved = true;
+      skipNextClickRef.current = true;
+    }
+    if (st.moved) {
+      e.preventDefault(); // prevent scroll during drag
+      const margin = 8;
+      const size = 48;
+      const nx = t.clientX - st.offsetX;
+      const ny = t.clientY - st.offsetY;
+      const maxX = window.innerWidth - margin - size;
+      const maxY = window.innerHeight - margin - size;
+      setFabPos({ x: Math.max(margin, Math.min(nx, maxX)), y: Math.max(margin, Math.min(ny, maxY)) });
+    }
+  };
+  const onFabTouchEnd = (e: React.TouchEvent<HTMLButtonElement>) => {
+    const st = fabDownRef.current;
+    fabDownRef.current = null;
+    if (!st) return;
+    const threshold = 20;
+    const isClick = !st.moved;
+    if (isClick) {
+      setSwitcherOpen((v) => !v);
+      skipNextClickRef.current = true;
+      dragWasMoveRef.current = false;
+    } else {
+      dragWasMoveRef.current = true;
+    }
+  };
+  const onFabTouchCancel = () => {
+    fabDownRef.current = null;
+    skipNextClickRef.current = false;
+    dragWasMoveRef.current = false;
   };
 
   // Capture install prompt
@@ -248,18 +332,26 @@ export default function HomePage() {
 
       {/* FAB (mobile and desktop) */}
       <div
-        className="fixed z-20 pointer-events-auto"
+        className="fixed z-50 pointer-events-auto"
         style={{ left: `${fabPos.x}px`, top: `${fabPos.y}px` }}
       >
         <button
           aria-label="Switch app"
           className={clsx(
-            'h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg flex items-center justify-center text-2xl transition-transform duration-200 touch-none',
+            'h-12 w-12 rounded-full bg-blue-600 hover:bg-blue-500 shadow-lg flex items-center justify-center text-2xl transition-transform duration-200',
             switcherOpen && 'rotate-45'
           )}
-          onPointerDown={onFabPointerDown}
-          onPointerMove={onFabPointerMove}
-          onPointerUp={onFabPointerUp}
+          {...(!isTouchEnv ? {
+            onPointerDown: onFabPointerDown,
+            onPointerMove: onFabPointerMove,
+            onPointerUp: onFabPointerUp,
+            onPointerCancel: onFabPointerCancel,
+          } : {})}
+          onClick={onFabClick}
+          onTouchStart={onFabTouchStart}
+          onTouchMove={onFabTouchMove}
+          onTouchEnd={onFabTouchEnd}
+          onTouchCancel={onFabTouchCancel}
         >
           ⇄
         </button>
