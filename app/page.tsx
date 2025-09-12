@@ -16,6 +16,7 @@ export default function HomePage() {
   const addApp = useAppStore((s) => s.addApp);
   const activeApp = useAppStore((s) => s.activeApp);
   const setActiveApp = useAppStore((s) => s.setActiveApp);
+  const appsById = useAppStore((s) => s.appsById());
   const getZoom = useAppStore((s) => s.getZoom);
   const setZoom = useAppStore((s) => s.setZoom);
   const clipboard = useAppStore((s) => s.clipboard);
@@ -284,6 +285,18 @@ export default function HomePage() {
     } catch {}
   };
 
+  const copyActiveUrl = async () => {
+    if (!activeApp) return;
+    const app = appsById[activeApp];
+    if (!app) return;
+    try { await navigator.clipboard.writeText(app.url); } catch {}
+  };
+
+  const reloadAppById = (id?: string) => {
+    const ev = new CustomEvent('webos:reload', { detail: { id } });
+    window.dispatchEvent(ev);
+  };
+
   return (
     <div className="relative flex-1">
       {/* Iframe layer lives behind UI */}
@@ -319,9 +332,30 @@ export default function HomePage() {
                   </div>
                   <div className="font-medium truncate" title={app.name}>{app.name}</div>
                   <div className="text-xs text-neutral-400 truncate" title={app.url}>{app.url}</div>
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex gap-2 mt-1 items-center">
                     <button className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => openApp(app.id)}>Open</button>
-                    <button className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-sm" onClick={() => deleteApp(app.id)}>Delete</button>
+                    <button
+                      aria-label="Copy URL"
+                      title="Copy URL"
+                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                      onClick={() => copyText(app.url)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1z"/>
+                        <path d="M18 5H10a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 14H10V7h8v12z"/>
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Delete app"
+                      title="Delete app"
+                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                      onClick={() => { if (confirm(`Delete \"${app.name}\"?`)) deleteApp(app.id); }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm1 2V4h4v1h-4z"/>
+                        <path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8zm4 2v9h2v-9h-2zm4 0v9h2v-9h-2z"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -386,20 +420,36 @@ export default function HomePage() {
               <div className="px-3 pb-[max(env(safe-area-inset-bottom),1rem)] overflow-auto">
           <div className="flex items-center justify-between mb-2">
             <div className="font-medium">Web OS</div>
-            <div className="flex items-center gap-2">
-              {installEvt && (
-                <button className="px-3 py-1 rounded bg-green-600 hover:bg-green-500" onClick={onInstall}>Install</button>
-              )}
-              {!showHome && (
-                <div className="flex items-center gap-1 text-sm">
-                  <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(-0.1)}>-</button>
-                  <span className="min-w-[3.5rem] text-center">{Math.round(zoom * 100)}%</span>
-                  <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(+0.1)}>+</button>
-                </div>
-              )}
-              <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setActiveApp(null)}>Home</button>
-              <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setSwitcherOpen(false)}>Close</button>
-            </div>
+              <div className="flex items-center gap-2">
+                {installEvt && (
+                  <button className="px-3 py-1 rounded bg-green-600 hover:bg-green-500" onClick={onInstall}>Install</button>
+                )}
+                {!showHome && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(-0.1)}>-</button>
+                    <span className="min-w-[3.5rem] text-center">{Math.round(zoom * 100)}%</span>
+                    <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(+0.1)}>+</button>
+                  </div>
+                )}
+                {!showHome && (
+                  <>
+                    <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => reloadAppById(activeApp!)}>Reload</button>
+                    <button
+                      aria-label="Copy URL"
+                      title="Copy URL"
+                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                      onClick={copyActiveUrl}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1z"/>
+                        <path d="M18 5H10a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 14H10V7h8v12z"/>
+                      </svg>
+                    </button>
+                  </>
+                )}
+                <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setActiveApp(null)}>Home</button>
+                <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setSwitcherOpen(false)}>Close</button>
+              </div>
           </div>
               {/* Panel tabs */}
               <div className="flex items-center gap-2 mb-2">
@@ -435,6 +485,11 @@ export default function HomePage() {
                           <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={20} className="rounded" />}</span>
                           <span className="truncate">{app.name}</span>
                         </button>
+                        <button
+                          className="px-2 py-1 rounded bg-neutral-800"
+                          title="Reload app"
+                          onClick={(e) => { e.stopPropagation(); reloadAppById(id); }}
+                        >↻</button>
                         <button
                           className="px-2 py-1 rounded bg-neutral-800"
                           title="Close app"
@@ -514,6 +569,22 @@ export default function HomePage() {
                     <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(+0.1)}>+</button>
                   </div>
                 )}
+                {!showHome && (
+                  <>
+                    <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => reloadAppById(activeApp!)}>Reload</button>
+                    <button
+                      aria-label="Copy URL"
+                      title="Copy URL"
+                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                      onClick={copyActiveUrl}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1z"/>
+                        <path d="M18 5H10a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 14H10V7h8v12z"/>
+                      </svg>
+                    </button>
+                  </>
+                )}
                 <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => setActiveApp(null)}>Home</button>
                 <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => setSwitcherOpen(false)}>Minimize</button>
               </div>
@@ -554,6 +625,11 @@ export default function HomePage() {
                           <span className="text-xl">{app.icon ?? <Favicon url={app.url} size={18} className="rounded" />}</span>
                           <span className="truncate">{app.name}</span>
                         </button>
+                        <button
+                          className="px-2 py-1 rounded bg-neutral-800"
+                          title="Reload app"
+                          onClick={(e) => { e.stopPropagation(); reloadAppById(id); }}
+                        >↻</button>
                         <button
                           className="px-2 py-1 rounded bg-neutral-800"
                           title="Close app"

@@ -172,33 +172,35 @@ export default function IframeHost() {
     };
   }, [activeId, isActiveLoading, isActiveBlocked]);
 
-  const retryActive = () => {
-    if (!activeId) return;
-    const iframe = frames.current.get(activeId);
-    const app = appsById[activeId];
+  const reloadById = (id: string | null | undefined) => {
+    if (!id) return;
+    const iframe = frames.current.get(id);
+    const app = appsById[id];
     if (!iframe || !app) return;
-    setBlocked((prev) => { const n = new Set(prev); n.delete(activeId); return n; });
-    setLoading((prev) => new Set(prev).add(activeId));
-    const prevTimer = timers.current.get(activeId);
-    if (prevTimer) { clearTimeout(prevTimer); timers.current.delete(activeId); }
+    setBlocked((prev) => { const n = new Set(prev); n.delete(id); return n; });
+    setLoading((prev) => new Set(prev).add(id));
+    const prevTimer = timers.current.get(id);
+    if (prevTimer) { clearTimeout(prevTimer); timers.current.delete(id); }
     iframe.src = app.url;
     const onLoad = () => {
-      const t = timers.current.get(activeId!);
-      if (t) { clearTimeout(t); timers.current.delete(activeId!); }
-      setLoading((prev) => { const n = new Set(prev); n.delete(activeId!); return n; });
-      setBlocked((prev) => { const n = new Set(prev); n.delete(activeId!); return n; });
+      const t = timers.current.get(id);
+      if (t) { clearTimeout(t); timers.current.delete(id); }
+      setLoading((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      setBlocked((prev) => { const n = new Set(prev); n.delete(id); return n; });
     };
     iframe.addEventListener('load', onLoad, { once: true });
     const timeoutId = window.setTimeout(() => {
       setBlocked((prev) => {
-        if (!loading.has(activeId!)) return prev;
+        if (!loading.has(id)) return prev;
         const n = new Set(prev);
-        n.add(activeId!);
+        n.add(id);
         return n;
       });
     }, 6000);
-    timers.current.set(activeId, timeoutId);
+    timers.current.set(id, timeoutId);
   };
+
+  const retryActive = () => reloadById(activeId);
 
   const openActiveInNewTab = () => {
     if (!activeId) return;
@@ -211,6 +213,21 @@ export default function IframeHost() {
     if (!activeId) return;
     setBlocked((prev) => { const n = new Set(prev); n.delete(activeId); return n; });
   };
+
+  // Listen for external reload requests (e.g., from UI menu)
+  React.useEffect(() => {
+    const onReload = (e: Event) => {
+      try {
+        const detail = (e as CustomEvent<{ id?: string }>).detail || {};
+        const id = detail.id ?? activeId;
+        reloadById(id);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('webos:reload' as any, onReload as any);
+    return () => window.removeEventListener('webos:reload' as any, onReload as any);
+  }, [activeId, appsById]);
 
   return (
     <div className="iframe-host">
