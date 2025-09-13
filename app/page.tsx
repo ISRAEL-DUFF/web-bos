@@ -285,6 +285,10 @@ export default function HomePage() {
     } catch {}
   };
 
+  const refreshPage = () => {
+    if (typeof window !== 'undefined') window.location.reload();
+  };
+
   const copyActiveUrl = async () => {
     if (!activeApp) return;
     const app = appsById[activeApp];
@@ -442,6 +446,16 @@ export default function HomePage() {
                     <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(+0.1)}>+</button>
                   </div>
                 )}
+                <button
+                  aria-label="Refresh page"
+                  title="Refresh"
+                  className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                  onClick={refreshPage}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                    <path d="M12 4a8 8 0 1 1-7.45 11H6a6 6 0 1 0 1.76-4.24L10 12H4V6l2.12 2.12A7.98 7.98 0 0 1 12 4z"/>
+                  </svg>
+                </button>
                 {!showHome && (
                   <>
                     <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => reloadAppById(activeApp!)}>Reload</button>
@@ -630,6 +644,16 @@ export default function HomePage() {
                     <button className="px-2 py-1 rounded bg-neutral-800" onClick={() => changeZoom(+0.1)}>+</button>
                   </div>
                 )}
+                <button
+                  aria-label="Refresh page"
+                  title="Refresh"
+                  className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                  onClick={refreshPage}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                    <path d="M12 4a8 8 0 1 1-7.45 11H6a6 6 0 1 0 1.76-4.24L10 12H4V6l2.12 2.12A7.98 7.98 0 0 1 12 4z"/>
+                  </svg>
+                </button>
                 {!showHome && (
                   <>
                     <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => reloadAppById(activeApp!)}>Reload</button>

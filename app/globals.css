@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 html, body, #__next { height: 100%; }
+/* Disable Chrome Android pull-to-refresh */
+html, body { overscroll-behavior-y: none; }
 body { @apply bg-neutral-950 text-neutral-100; }
 
 .iframe-host {
@@ -16,4 +18,3 @@ body { @apply bg-neutral-950 text-neutral-100; }
   inset: 0;
   border: 0;
 }
-
