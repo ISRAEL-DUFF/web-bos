@@ -458,7 +458,7 @@ export default function HomePage() {
                 </button>
                 {!showHome && (
                   <>
-                    <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => reloadAppById(activeApp!)}>Reload</button>
+                    {/* <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => reloadAppById(activeApp!)}>Reload</button> */}
                     <button
                       aria-label="Copy URL"
                       title="Copy URL"
@@ -471,9 +471,18 @@ export default function HomePage() {
                       </svg>
                     </button>
                   </>
-                )}
-                <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setActiveApp(null)}>Home</button>
-                <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setSwitcherOpen(false)}>Close</button>
+                )} 
+                <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setActiveApp(null)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                      <path d="M12 2L21 9.5V20a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2V9.5L12 2z"/>
+                    </svg>
+                </button>
+                <button className="px-3 py-1 rounded bg-neutral-800" onClick={() => setSwitcherOpen(false)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                      className="h-4 w-4" aria-hidden="true">
+                    <path d="M18.3 5.7a1 1 0 0 0-1.4 0L12 10.6 7.1 5.7a1 1 0 1 0-1.4 1.4L10.6 12l-4.9 4.9a1 1 0 1 0 1.4 1.4L12 13.4l4.9 4.9a1 1 0 0 0 1.4-1.4L13.4 12l4.9-4.9a1 1 0 0 0 0-1.4z"/>
+                  </svg>
+                </button>
               </div>
           </div>
               {/* Panel tabs */}
@@ -649,14 +658,14 @@ export default function HomePage() {
                   title="Refresh"
                   className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
                   onClick={refreshPage}
-                >
+                > 
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                     <path d="M12 4a8 8 0 1 1-7.45 11H6a6 6 0 1 0 1.76-4.24L10 12H4V6l2.12 2.12A7.98 7.98 0 0 1 12 4z"/>
                   </svg>
                 </button>
                 {!showHome && (
                   <>
-                    <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => reloadAppById(activeApp!)}>Reload</button>
+                    {/* <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => reloadAppById(activeApp!)}>Reload</button> */}
                     <button
                       aria-label="Copy URL"
                       title="Copy URL"
@@ -670,7 +679,11 @@ export default function HomePage() {
                     </button>
                   </>
                 )}
-                <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => setActiveApp(null)}>Home</button>
+                <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => setActiveApp(null)}>
+                  Home <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
+                        <path d="M12 2L21 9.5V20a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2V9.5L12 2z"/>
+                      </svg>
+                </button>
                 <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => setSwitcherOpen(false)}>Minimize</button>
               </div>
             </div>
