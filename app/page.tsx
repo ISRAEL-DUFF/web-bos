@@ -333,7 +333,18 @@ export default function HomePage() {
                   <div className="font-medium truncate" title={app.name}>{app.name}</div>
                   <div className="text-xs text-neutral-400 truncate" title={app.url}>{app.url}</div>
                   <div className="flex gap-2 mt-1 items-center">
-                    <button className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => openApp(app.id)}>Open</button>
+                    <button
+                      aria-label="Open"
+                      title="Open"
+                      className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm flex items-center gap-1"
+                      onClick={() => openApp(app.id)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3z"/>
+                        <path d="M5 5h5V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-2v5H5V5z"/>
+                      </svg>
+                      <span className="hidden md:inline">Open</span>
+                    </button>
                     <button
                       aria-label="Copy URL"
                       title="Copy URL"
@@ -486,15 +497,25 @@ export default function HomePage() {
                           <span className="truncate">{app.name}</span>
                         </button>
                         <button
-                          className="px-2 py-1 rounded bg-neutral-800"
+                          aria-label="Reload app"
+                          className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
                           title="Reload app"
                           onClick={(e) => { e.stopPropagation(); reloadAppById(id); }}
-                        >↻</button>
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M12 4a8 8 0 1 1-7.45 11H6a6 6 0 1 0 1.76-4.24L10 12H4V6l2.12 2.12A7.98 7.98 0 0 1 12 4z"/>
+                          </svg>
+                        </button>
                         <button
-                          className="px-2 py-1 rounded bg-neutral-800"
+                          aria-label="Close app"
+                          className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
                           title="Close app"
                           onClick={(e) => { e.stopPropagation(); closeApp(id); }}
-                        >×</button>
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3 10.6 10.6 16.9 4.3z"/>
+                          </svg>
+                        </button>
                       </div>
                     );
                   })}
@@ -517,8 +538,28 @@ export default function HomePage() {
                       <div className="text-xs text-neutral-400 mb-1">{new Date(c.ts).toLocaleTimeString()}</div>
                       <div className="text-sm break-words whitespace-pre-wrap max-h-32 overflow-auto">{c.text}</div>
                       <div className="mt-2 flex gap-2">
-                        <button className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(c.text)}>Copy</button>
-                        <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => removeClipboard(c.id)}>Delete</button>
+                        <button
+                          aria-label="Copy text"
+                          title="Copy"
+                          className="p-2 rounded bg-blue-600 hover:bg-blue-500"
+                          onClick={() => copyText(c.text)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1z"/>
+                            <path d="M18 5H10a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 14H10V7h8v12z"/>
+                          </svg>
+                        </button>
+                        <button
+                          aria-label="Delete entry"
+                          title="Delete"
+                          className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                          onClick={() => removeClipboard(c.id)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm1 2V4h4v1h-4z"/>
+                            <path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8zm4 2v9h2v-9h-2zm4 0v9h2v-9h-2z"/>
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -534,8 +575,28 @@ export default function HomePage() {
                     onChange={(e) => setNotepad(e.target.value)}
                   />
                   <div className="flex gap-2">
-                    <button className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(notepad)}>Copy All</button>
-                    <button className="px-3 py-1 rounded bg-neutral-800 text-sm" onClick={() => setNotepad('')}>Clear</button>
+                    <button
+                      aria-label="Copy all"
+                      title="Copy all"
+                      className="p-2 rounded bg-blue-600 hover:bg-blue-500"
+                      onClick={() => copyText(notepad)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1z"/>
+                        <path d="M18 5H10a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 14H10V7h8v12z"/>
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Clear notes"
+                      title="Clear"
+                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                      onClick={() => setNotepad('')}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm1 2V4h4v1h-4z"/>
+                        <path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8zm4 2v9h2v-9h-2zm4 0v9h2v-9h-2z"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               )}
@@ -626,15 +687,25 @@ export default function HomePage() {
                           <span className="truncate">{app.name}</span>
                         </button>
                         <button
-                          className="px-2 py-1 rounded bg-neutral-800"
+                          aria-label="Reload app"
+                          className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
                           title="Reload app"
                           onClick={(e) => { e.stopPropagation(); reloadAppById(id); }}
-                        >↻</button>
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M12 4a8 8 0 1 1-7.45 11H6a6 6 0 1 0 1.76-4.24L10 12H4V6l2.12 2.12A7.98 7.98 0 0 1 12 4z"/>
+                          </svg>
+                        </button>
                         <button
-                          className="px-2 py-1 rounded bg-neutral-800"
+                          aria-label="Close app"
+                          className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
                           title="Close app"
                           onClick={(e) => { e.stopPropagation(); closeApp(id); }}
-                        >×</button>
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3 10.6 10.6 16.9 4.3z"/>
+                          </svg>
+                        </button>
                       </div>
                     );
                   })}
@@ -658,8 +729,28 @@ export default function HomePage() {
                       <div className="text-xs text-neutral-400 mb-1">{new Date(c.ts).toLocaleString()}</div>
                       <div className="text-sm break-words whitespace-pre-wrap max-h-32 overflow-auto">{c.text}</div>
                       <div className="mt-2 flex gap-2">
-                        <button className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(c.text)}>Copy</button>
-                        <button className="px-2 py-1 rounded bg-neutral-800 text-sm" onClick={() => removeClipboard(c.id)}>Delete</button>
+                        <button
+                          aria-label="Copy text"
+                          title="Copy"
+                          className="p-2 rounded bg-blue-600 hover:bg-blue-500"
+                          onClick={() => copyText(c.text)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1z"/>
+                            <path d="M18 5H10a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 14H10V7h8v12z"/>
+                          </svg>
+                        </button>
+                        <button
+                          aria-label="Delete entry"
+                          title="Delete"
+                          className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                          onClick={() => removeClipboard(c.id)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                            <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm1 2V4h4v1h-4z"/>
+                            <path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8zm4 2v9h2v-9h-2zm4 0v9h2v-9h-2z"/>
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -676,8 +767,28 @@ export default function HomePage() {
                     onChange={(e) => setNotepad(e.target.value)}
                   />
                   <div className="flex gap-2">
-                    <button className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-sm" onClick={() => copyText(notepad)}>Copy All</button>
-                    <button className="px-2.5 py-1 rounded bg-neutral-800 text-sm" onClick={() => setNotepad('')}>Clear</button>
+                    <button
+                      aria-label="Copy all"
+                      title="Copy all"
+                      className="p-2 rounded bg-blue-600 hover:bg-blue-500"
+                      onClick={() => copyText(notepad)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M16 1H6a2 2 0 0 0-2 2v10h2V3h10V1z"/>
+                        <path d="M18 5H10a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 14H10V7h8v12z"/>
+                      </svg>
+                    </button>
+                    <button
+                      aria-label="Clear notes"
+                      title="Clear"
+                      className="p-2 rounded bg-neutral-800 hover:bg-neutral-700"
+                      onClick={() => setNotepad('')}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                        <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm1 2V4h4v1h-4z"/>
+                        <path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8zm4 2v9h2v-9h-2zm4 0v9h2v-9h-2z"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               )}
